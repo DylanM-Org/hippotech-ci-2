@@ -31,17 +31,31 @@ jobs:
           with:
             compose-file: "docker-compose.yml"
 
+        - name: Sleep for 15 seconds v1
+          uses: jakejarvis/wait-action@master
+          with:
+            time: '15s'
+
         - name: Install Cypress
           uses: cypress-io/github-action@v4
           with:
             working-directory: ./hippotech-react
             runTests: false
 
+        - name: Sleep for 15 seconds v2
+          uses: jakejarvis/wait-action@master
+          with:
+            time: '15s'
+
         - name: Cypress run
           uses: cypress-io/github-action@v4
           with:
             working-directory: ./hippotech-react
             install: false
+
+        - name: Run Automated Acceptance Tests
+          working-directory: ./jest
+          run: npm install && npm test
 
         - name: List Seeker Vulnerabilities
           uses: mtolley/seeker-github-actions/list-seeker-vulnerabilities@v1.1
