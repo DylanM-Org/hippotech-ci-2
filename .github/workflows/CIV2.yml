@@ -30,10 +30,10 @@ jobs:
         - uses: isbang/compose-action@v1.5.1
           with:
             compose-file: "docker-compose.yml"
-        - name: Install Cypress
-          uses: cypress-io/github-action@v4
-          with:
-            working-directory: ./hippotech-react
+        #- name: Install Cypress
+        #  uses: cypress-io/github-action@v4
+        #  with:
+        #    working-directory: ./hippotech-react
         - name: Run Automated Acceptance Tests
           working-directory: ./jest
           run: npm install && npm test
