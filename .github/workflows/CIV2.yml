@@ -37,7 +37,7 @@ jobs:
             time: '15s'
 
         - name: Install Cypress
-          uses: cypress-io/github-action@v4
+          uses: cypress-io/github-action@v6
           with:
             working-directory: ./hippotech-react
             runTests: false
