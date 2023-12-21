@@ -31,10 +31,10 @@ jobs:
           with:
             compose-file: "docker-compose.yml"
 
-        - name: Sleep for 15 seconds v1
+        - name: Sleep for 30 seconds v1
           uses: jakejarvis/wait-action@master
           with:
-            time: '15s'
+            time: '30s'
 
         - name: Install Cypress
           uses: cypress-io/github-action@v6
