@@ -30,11 +30,18 @@ jobs:
         - uses: isbang/compose-action@v1.5.1
           with:
             compose-file: "docker-compose.yml"
-            
+
         - name: Install Cypress
           uses: cypress-io/github-action@v4
           with:
             working-directory: ./hippotech-react
+            runTests: false
+
+        - name: Cypress run
+          uses: cypress-io/github-action@v4
+          with:
+            working-directory: ./hippotech-react
+            install: false
 
         - name: List Seeker Vulnerabilities
           uses: mtolley/seeker-github-actions/list-seeker-vulnerabilities@v1.1

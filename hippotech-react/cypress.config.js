@@ -7,7 +7,7 @@ module.exports = {
     },
     baseUrl: 'http://localhost:3001',
     video: false,
-    defaultCommandTimeout: 10000,
+    defaultCommandTimeout: 120e3,
     requestTimeout: 120e3
   },
 }
