@@ -39,7 +39,6 @@ jobs:
           run: npm install && npm test
 
         - name: List Seeker Vulnerabilities
-          if: ${{ steps.seeker-check.outputs.enabled == 'true' }}
           uses: mtolley/seeker-github-actions/list-seeker-vulnerabilities@v1.1
           with:
             seekerAPIToken: ${{ secrets.SEEKER_ACCESS_TOKEN }}
@@ -47,7 +46,6 @@ jobs:
             onlySeekerVerified: true
 
         - name: Seeker Compliance Reporting
-          if: ${{ steps.seeker-check.outputs.enabled == 'true' }}
           uses: mtolley/seeker-github-actions/seeker-compliance-reporting@v1.1
           with:
             seekerAPIToken: ${{ secrets.SEEKER_ACCESS_TOKEN }}
@@ -61,7 +59,6 @@ jobs:
             report_paths: 'jest/*.xml'
 
         - name: Get results from Seeker
-          if: ${{ steps.seeker-check.outputs.enabled == 'true' }}
           uses: lejouni/seeker-report-export@main
           with:
             url: ${{vars.SEEKER_SERVER_URL}}
@@ -71,7 +68,6 @@ jobs:
             stacktrace: true
 
         - name: Upload SARIF file
-          if: ${{ steps.seeker-check.outputs.enabled == 'true' }}
           uses: github/codeql-action/upload-sarif@v2
           with:
             # Path to SARIF file
