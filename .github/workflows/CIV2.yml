@@ -89,7 +89,7 @@ jobs:
             stacktrace: true
 
         - name: Upload SARIF file
-          uses: github/codeql-action/upload-sarif@v2
+          uses: github/codeql-action/upload-sarif@v3
           with:
             # Path to SARIF file
             sarif_file: /home/runner/work/hippotech-ci-2/hippotech-ci-2/SeekerResults.sarif.json
