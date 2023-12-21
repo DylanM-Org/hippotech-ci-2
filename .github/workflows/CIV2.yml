@@ -21,8 +21,8 @@ jobs:
       statuses: write
 
     env:
-      SEEKER_SERVER_URL: ${{ vars.SEEKER_SERVER_URL }}
-      SEEKER_PROJECT_KEY: ${{ vars.SEEKER_PROJECT_KEY }}
+      SEEKER_SERVER_URL: ${{ secrets.SEEKER_SERVER_URL }}
+      SEEKER_PROJECT_KEY: ${{ secrets.SEEKER_PROJECT_KEY }}
     
     name: test compose action
     steps:
@@ -31,10 +31,10 @@ jobs:
           with:
             compose-file: "docker-compose.yml"
 
-        - name: Sleep for 30 seconds v1
+        - name: Sleep for 60 seconds v1
           uses: jakejarvis/wait-action@master
           with:
-            time: '30s'
+            time: '60s'
 
         - name: Install Cypress
           uses: cypress-io/github-action@v6
@@ -82,9 +82,9 @@ jobs:
         - name: Get results from Seeker
           uses: lejouni/seeker-report-export@main
           with:
-            url: ${{vars.SEEKER_SERVER_URL}}
+            url: ${{secrets.SEEKER_SERVER_URL}}
             token: ${{secrets.SEEKER_ACCESS_TOKEN}}
-            project: ${{vars.SEEKER_PROJECT_KEY}}
+            project: ${{secrets.SEEKER_PROJECT_KEY}}
             format: sarif
             stacktrace: true
 
