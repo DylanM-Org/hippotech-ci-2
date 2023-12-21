@@ -52,7 +52,7 @@ jobs:
           with:
             working-directory: ./hippotech-react
             install: false
-            continue-on-error: true
+          continue-on-error: true
 
         - name: Run Automated Acceptance Tests
           working-directory: ./jest
