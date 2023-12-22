@@ -21,8 +21,8 @@ jobs:
       statuses: write
 
     env:
-      SEEKER_SERVER_URL: ${{ secrets.SEEKER_SERVER_URL }}
-      SEEKER_PROJECT_KEY: ${{ secrets.SEEKER_PROJECT_KEY }}
+      SEEKER_SERVER_URL: ${{ vars.SEEKER_SERVER_URL }}
+      SEEKER_PROJECT_KEY: ${{ vars.SEEKER_PROJECT_KEY }}
     
     name: test compose action
     steps:
@@ -82,9 +82,9 @@ jobs:
         - name: Get results from Seeker
           uses: lejouni/seeker-report-export@main
           with:
-            url: ${{secrets.SEEKER_SERVER_URL}}
+            url: ${{vars.SEEKER_SERVER_URL}}
             token: ${{secrets.SEEKER_ACCESS_TOKEN}}
-            project: ${{secrets.SEEKER_PROJECT_KEY}}
+            project: ${{vars.SEEKER_PROJECT_KEY}}
             format: sarif
             stacktrace: true
 
