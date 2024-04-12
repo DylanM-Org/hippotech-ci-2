@@ -1,9 +1,10 @@
 name: CI V2 Docker Compose
 on:
   workflow_dispatch:
+  push:
+    branches: [ main, master, develop, stage, release ]
   pull_request:
-    branches:
-      - main
+    branches: [ main, master, develop, stage, release ]
 jobs:
   test-compose-action:
     runs-on: ubuntu-latest
