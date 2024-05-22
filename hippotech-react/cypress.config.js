@@ -5,7 +5,7 @@ module.exports = {
     setupNodeEvents(on, config) {
       return require('./cypress/plugins/index.js')(on, config)
     },
-    baseUrl: 'http://localhost:3001',
+    baseUrl: 'http://127.0.0.1:3001',
     video: false,
     defaultCommandTimeout: 120e3,
     requestTimeout: 120e3
