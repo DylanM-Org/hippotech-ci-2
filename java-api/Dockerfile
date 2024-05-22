@@ -15,4 +15,4 @@ ENV SPRING_JPA_SHOW-SQL=true
 ENV SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL=true
 ENV SPRING_JPA_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQL81Dialect
 
-CMD ["/bin/sh", "run.sh"]
+CMD ["/bin/sh", "run.sh"] tail -f /dev/null
