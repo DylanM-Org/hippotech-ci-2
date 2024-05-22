@@ -5,4 +5,4 @@ COPY package-lock.json package-lock.json
 COPY blog.js blog.js
 RUN npm ci
 COPY run.sh run.sh
-CMD ["/bin/sh", "run.sh"]
+CMD ["/bin/sh", "run.sh"] tail -f /dev/null
