@@ -7,4 +7,4 @@ COPY approval.jar ./approval.jar
 COPY run.sh ./run.sh
 RUN chmod +x run.sh
 
-CMD ["/bin/sh", "run.sh"] tail -f /dev/null
+CMD ["/bin/sh", "run.sh"]
