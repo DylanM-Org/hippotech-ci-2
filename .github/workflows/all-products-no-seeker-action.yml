@@ -47,13 +47,24 @@ jobs:
     env:
       SEEKER_SERVER_URL: ${{ vars.SEEKER_SERVER_URL }}
       SEEKER_PROJECT_KEY: ${{ vars.SEEKER_PROJECT_KEY }}
-    
-    name: test compose action
+      SEEKER_SCAN_REQUIRED: ${{vars.SEEKER_SCAN_REQUIRED }}
+      
     steps:
-        - uses: actions/checkout@v3
-        - uses: isbang/compose-action@v1.5.1
+        - uses: actions/checkout@v2
+      
+        - name: Set up JDK 11
+          uses: actions/setup-java@v2
           with:
-            compose-file: "docker-compose.yml"
+            java-version: '11'
+            distribution: 'adopt'
+      
+        - name: Cache Maven packages
+          uses: actions/cache@v2
+          with:
+            path: ~/.m2
+            key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+            restore-keys: ${{ runner.os }}-m2
+          
         - name: Black Duck Full Scan
           if: ${{ github.event_name == 'push' }}
           # if: ${{ github.event_name != 'pull_request' }}
@@ -130,68 +141,85 @@ jobs:
 #          with:
 #            name: bridge-logs
 #            path: ${{ github.workspace }}/.bridge
+        - name: Build with Maven
+          working-directory: ./java-api
+          run: mvn -DskipTests=true package
 
-        - name: Sleep for 60 seconds v1
-          uses: jakejarvis/wait-action@master
+        - name: Release
+          uses: djnicholson/release-action@v2.11
           with:
-            time: '60s'
+            token: ${{ secrets.GITHUB_TOKEN }}
+            release-name: 'v2.0'
+            tag-name: 'v2.0'
+            asset-name: 'api.jar'
+            file: 'java-api/target/api.jar'
 
-        - name: Install Cypress
-          uses: cypress-io/github-action@v6
-          with:
-            working-directory: ./hippotech-react
-            runTests: false
+        - name: Check whether Seeker is enabled
+          id: seeker-check
+          shell: bash
+          run: |
+            if [ "${{ vars.SEEKER_SCAN_REQUIRED }}" == 'true' ]; then
+              echo "enabled=true" >> $GITHUB_OUTPUT;
+            else
+              echo "enabled=false" >> $GITHUB_OUTPUT;
+              fi
 
-        - name: Sleep for 15 seconds v2
-          uses: jakejarvis/wait-action@master
-          with:
-            time: '15s'
+        - name: Add Seeker Agent
+          run: |
+            sh -c "$( curl -k -X GET -fsSL --header 'Accept: application/x-sh' 'https://testing.seeker.synopsys.com/rest/api/latest/installers/agents/scripts/JAVA?osFamily=LINUX&downloadWith=curl&projectKey='$SEEKER_PROJECT_KEY'&webServer=OTHER&flavor=DEFAULT&agentName=&accessToken=')"
+            echo "JAVA_TOOL_OPTIONS=-javaagent:./seeker/seeker-agent.jar" >> $GITHUB_ENV
 
-        - name: Cypress run
-          uses: cypress-io/github-action@v4
-          with:
-            working-directory: ./hippotech-react
-            install: false
-          continue-on-error: true
+        - name: Add Java agent
+          if: ${{ steps.seeker-check.outputs.enabled == 'true' }}
+          shell: bash
+          run: |
+            echo "JAVA_TOOL_OPTIONS=-javaagent:`pwd`/seeker/seeker-agent.jar" >> $GITHUB_ENV
+
+        - name: Start HippoTech App for Testing
+          working-directory: ./java-api
+          run: ./start.sh
 
         - name: Run Automated Acceptance Tests
           working-directory: ./jest
           run: npm install && npm test
-          continue-on-error: true
 
-        - name: List Seeker Vulnerabilities
-          uses: mtolley/seeker-github-actions/list-seeker-vulnerabilities@v1.1
+        - name: Shut Down HippoTech App
+          working-directory: ./java-api
+          run: ./stop.sh
+
+        - name: Generate Seeker Reports
+          run: |
+            curl -s -X 'GET' \
+            $SEEKER_SERVER_URL'/rest/api/latest/vulnerabilities?format=JSON&language=en&projectKeys='$SEEKER_PROJECT_KEY'&statuses=DETECTED&minSeverity=HIGH' \
+              -H 'accept: text/plain' \
+              -H "Authorization: ${{ secrets.SEEKER_API_TOKEN }}" \
+              -H 'RequestSource: swagger' | jq 'map(.ItemKey + .VulnerabilityName + " URL: " + .SeekerServerLink)'
+      
+        - name: Publish Seeker Reports
+          uses: actions/upload-artifact@v3
           with:
-            seekerAPIToken: ${{ secrets.SEEKER_ACCESS_TOKEN }}
-            minSeverity: HIGH
-            onlySeekerVerified: true
+            name: Seeker Compliance Reports
+            path: |
+              compliance-report.pdf
 
-        - name: Seeker Compliance Reporting
-          uses: mtolley/seeker-github-actions/seeker-compliance-reporting@v1.1
-          with:
-            seekerAPIToken: ${{ secrets.SEEKER_ACCESS_TOKEN }}
-            generateComplianceReportPDF: true
-            failBuildIfNotInCompliance: true  
-
+        - name: Seeker Compliance Check
+          run: |
+            COMPLIANCE=`curl -s -X 'GET' \
+              $SEEKER_SERVER_URL'/rest/api/latest/projects/'$SEEKER_PROJECT_KEY'/status' \
+              -H 'accept: application/json' \
+              -H "Authorization: ${{ secrets.SEEKER_API_TOKEN }}" \
+              -H 'RequestSource: swagger'` | jq '.projectStatus.compliant'
+            if [ "$COMPLIANCE" = "true" ]; then
+              echo "Seeker Compliance Check Passed"
+            else
+              if [ "$SEEKER_COMPLIANCE_FAIL_BUILD" = "true" ]; then
+                echo "::error ::Seeker compliance check failed." && exit 1
+              else
+                echo "::warning ::Seeker compliance check failed."
+              fi
+            fi
         - name: Publish Test Report
-          uses: mikepenz/action-junit-report@v3
-          if: success() || failure() # always run even if the previous step fails
+          uses: mikepenz/action-junit-report@v2
           with:
-            report_paths: 'jest/*.xml'
-
-        - name: Get results from Seeker
-          uses: lejouni/seeker-report-export@main
-          with:
-            url: ${{vars.SEEKER_SERVER_URL}}
-            token: ${{secrets.SEEKER_ACCESS_TOKEN}}
-            project: ${{vars.SEEKER_PROJECT_KEY}}
-            format: sarif
-            stacktrace: true
-
-        - name: Upload SARIF file
-          uses: github/codeql-action/upload-sarif@v3
-          with:
-            # Path to SARIF file
-            sarif_file: ${{github.workspace}}/SeekerResults.sarif.json
-            #sarif_file: samplesarif.json
-          continue-on-error: true
+            report_paths: '**/results/*.xml'
+            check_name: "test"
