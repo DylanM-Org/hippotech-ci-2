@@ -133,7 +133,7 @@ jobs:
             # ER CDX-1666 support branch-name
             base-branch-name: ${{ github.event.repository.default_branch }}
             target-branch-name: ${{ github.ref_name }}              
-            source-and-binaries-glob: './**'      # commenting it out to test a different SRM server. This may not be correct. 
+            #source-and-binaries-glob: './**'      # commenting it out to test a different SRM server. This may not be correct. 
             wait-for-completion: true
 #        - name: Save Logs
 #          if: always()
