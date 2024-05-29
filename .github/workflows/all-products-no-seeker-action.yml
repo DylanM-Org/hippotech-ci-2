@@ -1,0 +1,197 @@
+# example workflow for standalone Black Duck, Coverity and SRM (Code DX) using GitHub Actions
+# - Black Duck and Coverity full scans on push to specified branches with upload to SRM
+# - Black Duck RAPID and Coverity Comparison scans on pull requests with PR comments enabled
+#  2024-04-30 - updated full scns modules to use   if: ${{ github.event_name == 'push' }}  instead of triggering on any non-PR event
+#
+# https://github.com/marketplace/actions/synopsys-action
+# https://github.com/marketplace/actions/code-dx-analysis
+#
+#
+#  ENVIRONMENT VARIABLES AND SECRETS 
+# vars.BLACKDUCK_URL
+# secrets.BLACKDUCK_API_TOKEN
+# vars.COVERITY_URL
+# secrets.COV_USER
+# secrets.COVERITY_PASSPHRASE
+# vars.SRM_URL
+# secrets.SRM_APIKEY
+# secrets.GITHUB_TOKEN  #  Confirm GITHUB_TOKEN has workflow read & write permissions (GitHub → Project → Settings → Actions → General → Workflow Permissions)
+#
+# reversed order of maven build and clean git. not sure why, just seems like clean git should happen before the build
+# 
+# change to force github action for 1-SamShoberWork - 2024-05-01    7:03 pm
+#
+name: ci-all-products
+on:
+  push:
+    branches: [ 6-Production, main, 1-SamShoberWork-PersonalBranch, 2-Feature-Branch, 4-Dev, 5-Testing, 3-Release-Branch ]
+  pull_request:
+    branches: [ 6-Production, main, 1-SamShoberWork-PersonalBranch ] ## , 2-Feature-Branch, 4-Dev, 5-Testing, 3-Release-Branch  ]
+  workflow_dispatch:
+jobs:
+  test-compose-action:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      checks: write
+      contents: write
+      deployments: write
+      id-token: write
+      issues: write
+      discussions: write
+      packages: write
+      repository-projects: write
+      security-events: write
+      statuses: write
+
+    env:
+      SEEKER_SERVER_URL: ${{ vars.SEEKER_SERVER_URL }}
+      SEEKER_PROJECT_KEY: ${{ vars.SEEKER_PROJECT_KEY }}
+    
+    name: test compose action
+    steps:
+        - uses: actions/checkout@v3
+        - uses: isbang/compose-action@v1.5.1
+          with:
+            compose-file: "docker-compose.yml"
+        - name: Black Duck Full Scan
+          if: ${{ github.event_name == 'push' }}
+          # if: ${{ github.event_name != 'pull_request' }}
+          uses: synopsys-sig/synopsys-action@v1.9.0
+          env:
+            DETECT_PROJECT_NAME: ${{ github.event.repository.name }}
+            DETECT_PROJECT_VERSION_NAME: ${{ github.ref_name }}
+            DETECT_CODE_LOCATION_NAME: ${{ github.event.repository.name }}-${{ github.ref_name }}
+          with:
+            blackduck_url: ${{ vars.BLACKDUCK_URL }}
+            blackduck_token: ${{ secrets.BLACKDUCK_API_TOKEN }}
+            blackduck_scan_full: true
+            blackduck_scan_failure_severities: 'BLOCKER'
+            # blackduck_fixpr_enabled: true
+            # blackduck_reports_sarif_create: true
+            # blackduck_upload_sarif_report: true
+            # github_token: ${{ secrets.GITHUB_TOKEN }}
+        - name: Black Duck PR Scan
+          if: ${{ github.event_name == 'pull_request' }}
+          uses: synopsys-sig/synopsys-action@v1.9.0
+          env:
+            DETECT_PROJECT_NAME: ${{ github.event.repository.name }}
+            DETECT_PROJECT_VERSION_NAME: ${{ github.base_ref }}
+            DETECT_CODE_LOCATION_NAME: ${{ github.event.repository.name }}-${{ github.base_ref }}
+          with:
+            blackduck_url: ${{ vars.BLACKDUCK_URL }}
+            blackduck_token: ${{ secrets.BLACKDUCK_API_TOKEN }}
+            blackduck_scan_full: false
+            blackduck_prComment_enabled: true
+            # blackduck_fixpr_enabled: true
+            blackduck_reports_sarif_create: true
+            blackduck_upload_sarif_report: true
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+        - name: Coverity Full Scan
+          if: ${{ github.event_name == 'push' }}
+          # if: ${{ github.event_name != 'pull_request' }}
+          uses: synopsys-sig/synopsys-action@v1.9.0
+          with:
+            coverity_url: ${{ vars.COVERITY_URL }}
+            coverity_user: ${{ secrets.COV_USER }}
+            coverity_passphrase: ${{ secrets.COVERITY_PASSPHRASE }}
+            coverity_project_name: ${{ github.event.repository.name }}
+            coverity_stream_name: ${{ github.event.repository.name }}-${{ github.ref_name }}
+            # coverity_policy_view: 'Outstanding Issues'
+        - name: Coverity PR Scan
+          if: ${{ github.event_name == 'pull_request' }}
+          uses: synopsys-sig/synopsys-action@v1.9.0
+          with:
+            coverity_url: ${{ vars.COVERITY_URL }}
+            coverity_user: ${{ secrets.COV_USER }}
+            coverity_passphrase: ${{ secrets.COVERITY_PASSPHRASE }}
+            coverity_project_name: ${{ github.event.repository.name }}
+            coverity_stream_name: ${{ github.event.repository.name }}-${{ github.base_ref }}
+            coverity_prComment_enabled: true
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+        - name: SRM Upload
+          if: ${{ github.event_name == 'push' }}
+          # if: ${{ github.event_name != 'pull_request' }}
+          uses: 'codedx/codedx-github-action@v1.2.0'
+          with:
+            server-url: ${{ vars.SRM_URL }}/srm
+            api-key: ${{ secrets.SRM_APIKEY }}
+            # ER CDX-1693 support project-name
+            project-name: ${{ github.event.repository.name }}
+            # project-id: "4;branch=${{ github.ref_name }}"  
+            # ER CDX-1666 support branch-name
+            base-branch-name: ${{ github.event.repository.default_branch }}
+            target-branch-name: ${{ github.ref_name }}              
+            source-and-binaries-glob: './**'      # commenting it out to test a different SRM server. This may not be correct. 
+            wait-for-completion: true
+#        - name: Save Logs
+#          if: always()
+#          uses: actions/upload-artifact@v4
+#          with:
+#            name: bridge-logs
+#            path: ${{ github.workspace }}/.bridge
+
+        - name: Sleep for 60 seconds v1
+          uses: jakejarvis/wait-action@master
+          with:
+            time: '60s'
+
+        - name: Install Cypress
+          uses: cypress-io/github-action@v6
+          with:
+            working-directory: ./hippotech-react
+            runTests: false
+
+        - name: Sleep for 15 seconds v2
+          uses: jakejarvis/wait-action@master
+          with:
+            time: '15s'
+
+        - name: Cypress run
+          uses: cypress-io/github-action@v4
+          with:
+            working-directory: ./hippotech-react
+            install: false
+          continue-on-error: true
+
+        - name: Run Automated Acceptance Tests
+          working-directory: ./jest
+          run: npm install && npm test
+          continue-on-error: true
+
+        - name: List Seeker Vulnerabilities
+          uses: mtolley/seeker-github-actions/list-seeker-vulnerabilities@v1.1
+          with:
+            seekerAPIToken: ${{ secrets.SEEKER_ACCESS_TOKEN }}
+            minSeverity: HIGH
+            onlySeekerVerified: true
+
+        - name: Seeker Compliance Reporting
+          uses: mtolley/seeker-github-actions/seeker-compliance-reporting@v1.1
+          with:
+            seekerAPIToken: ${{ secrets.SEEKER_ACCESS_TOKEN }}
+            generateComplianceReportPDF: true
+            failBuildIfNotInCompliance: true  
+
+        - name: Publish Test Report
+          uses: mikepenz/action-junit-report@v3
+          if: success() || failure() # always run even if the previous step fails
+          with:
+            report_paths: 'jest/*.xml'
+
+        - name: Get results from Seeker
+          uses: lejouni/seeker-report-export@main
+          with:
+            url: ${{vars.SEEKER_SERVER_URL}}
+            token: ${{secrets.SEEKER_ACCESS_TOKEN}}
+            project: ${{vars.SEEKER_PROJECT_KEY}}
+            format: sarif
+            stacktrace: true
+
+        - name: Upload SARIF file
+          uses: github/codeql-action/upload-sarif@v3
+          with:
+            # Path to SARIF file
+            sarif_file: ${{github.workspace}}/SeekerResults.sarif.json
+            #sarif_file: samplesarif.json
+          continue-on-error: true
