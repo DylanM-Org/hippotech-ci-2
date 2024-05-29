@@ -21,7 +21,7 @@
 # 
 # change to force github action for 1-SamShoberWork - 2024-05-01    7:03 pm
 #
-name: ci-all-products
+name: ci-all-products - no seeker action
 on:
   push:
     branches: [ 6-Production, main, 1-SamShoberWork-PersonalBranch, 2-Feature-Branch, 4-Dev, 5-Testing, 3-Release-Branch ]
