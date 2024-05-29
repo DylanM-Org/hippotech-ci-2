@@ -64,6 +64,19 @@ jobs:
             path: ~/.m2
             key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
             restore-keys: ${{ runner.os }}-m2
+
+        - name: Build with Maven
+          working-directory: ./java-api
+          run: mvn -DskipTests=true package
+
+        - name: Release
+          uses: djnicholson/release-action@v2.11
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            release-name: 'v2.0'
+            tag-name: 'v2.0'
+            asset-name: 'api.jar'
+            file: 'java-api/target/api.jar'
           
         - name: Black Duck Full Scan
           if: ${{ github.event_name == 'push' }}
@@ -141,18 +154,6 @@ jobs:
 #          with:
 #            name: bridge-logs
 #            path: ${{ github.workspace }}/.bridge
-        - name: Build with Maven
-          working-directory: ./java-api
-          run: mvn -DskipTests=true package
-
-        - name: Release
-          uses: djnicholson/release-action@v2.11
-          with:
-            token: ${{ secrets.GITHUB_TOKEN }}
-            release-name: 'v2.0'
-            tag-name: 'v2.0'
-            asset-name: 'api.jar'
-            file: 'java-api/target/api.jar'
 
         - name: Check whether Seeker is enabled
           id: seeker-check
